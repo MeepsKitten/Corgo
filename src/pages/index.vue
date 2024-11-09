@@ -142,6 +142,7 @@ onMounted(() => {
 
 <style scoped>
 .bingo-container {
+  height: 100dvh;
   height: 100vh;
   width: 100vw;
   display: flex;
@@ -154,13 +155,15 @@ onMounted(() => {
 }
 
 .bingo-wrapper {
-  width: 90vmin;
-  height: 90vmin;
+  width: min(90vmin, 90%);
+  height: min(90dvh, 90%);
+  height: min(90vh, 90%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  margin: auto;
 }
 
 .bingo-board {
@@ -304,6 +307,20 @@ onMounted(() => {
   .new-board-btn {
     font-size: 1.2vmin;
     padding: 1vmin 2vmin;
+  }
+}
+
+@media (max-height: 600px) {
+  .bingo-container {
+    min-height: 100dvh;
+    min-height: 100vh;
+    height: auto;
+    padding: 20px 0;
+  }
+  
+  .bingo-wrapper {
+    height: auto;
+    width: min(90vmin, 90%);
   }
 }
 </style>
