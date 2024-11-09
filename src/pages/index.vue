@@ -226,7 +226,7 @@ onMounted(() => {
   color: #ff78ab;
   position: relative;
   z-index: 1;
-  font-size: 1.4vmin;
+  font-size: 2vmin;
   line-height: 1.2;
   padding: 0.5vmin;
   word-wrap: break-word;
