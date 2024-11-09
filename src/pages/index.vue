@@ -8,13 +8,21 @@
           </div>
           <div class="bingo-board">
             <div class="bingo-grid">
-              <v-card v-for="(cell, index) in bingoItems" :key="index" class="bingo-cell" :class="{ 'selected': cell.selected, 'free-space': cell.isFree && !cell.selected }" elevation="2" @click="toggleCell(index)">
+              <v-card v-for="(cell, index) in bingoItems" :key="index" class="bingo-cell" :class="{ 'selected': cell.selected, 'free-space': cell.isFree && !cell.selected, 'winning-cell': winningCells.includes(index) }" elevation="2" @click="toggleCell(index)">
                 <v-card-text class="text-center d-flex align-center justify-center">
                   <span>{{ cell.text }}</span>
                 </v-card-text> 
               </v-card>
             </div>
           </div>
+          <v-btn
+            class="mt-4 new-board-btn"
+            color="#ff78ab"
+            @click="generateBingoBoard"
+            elevation="2"
+          >
+            New Board!
+          </v-btn>
         </div>
       </v-col>
     </v-row>
@@ -22,13 +30,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import squaresData from '@/data/squares.json'
 
 const bingoItems = ref([])
+const winningCells = ref([])
 
 const toggleCell = (index) => {
   bingoItems.value[index].selected = !bingoItems.value[index].selected
+  checkWinningLines()
 }
 
 const getRandomItem = (array, usedItems) => {
@@ -65,6 +75,36 @@ const generateBingoBoard = () => {
     { text: getRandomItem(squaresData['Free'], usedItems), selected: false, isFree: true },
     ...items.slice(12)
   ]
+
+  winningCells.value = []
+}
+
+const checkWinningLines = () => {
+  const lines = [
+    // Rows
+    [0, 1, 2, 3, 4],
+    [5, 6, 7, 8, 9],
+    [10, 11, 12, 13, 14],
+    [15, 16, 17, 18, 19],
+    [20, 21, 22, 23, 24],
+    // Columns
+    [0, 5, 10, 15, 20],
+    [1, 6, 11, 16, 21],
+    [2, 7, 12, 17, 22],
+    [3, 8, 13, 18, 23],
+    [4, 9, 14, 19, 24],
+    // Diagonals
+    [0, 6, 12, 18, 24],
+    [4, 8, 12, 16, 20]
+  ]
+
+  winningCells.value = []
+
+  lines.forEach(line => {
+    if (line.every(index => bingoItems.value[index].selected)) {
+      winningCells.value.push(...line)
+    }
+  })
 }
 
 onMounted(() => {
@@ -127,8 +167,25 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-  transition: transform 0.3s ease;
+  transition: all 0.5s ease;
   background-color: white;
+  border: 2px solid transparent;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.bingo-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #3becff;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 0;
 }
 
 .bingo-cell:hover {
@@ -139,6 +196,8 @@ onMounted(() => {
   font-weight: bold;
   text-align: center;
   color: #ff78ab;
+  position: relative;
+  z-index: 1;
 }
 
 .selected {
@@ -150,5 +209,45 @@ onMounted(() => {
   border: 2px solid #ff78ab;
   box-shadow: 0 0 15px 10px #9c4a6a;
   color: #ff78ab;
+}
+
+.winning-cell {
+  border: 2px solid #ff78ab;
+  box-shadow: 0 0 20px 5px #ff78ab;
+  animation: winning-glow 2s infinite alternate;
+}
+
+.winning-cell::before {
+  opacity: 1;
+}
+
+@keyframes winning-glow {
+  0% {
+    box-shadow: 0 0 20px 5px #ff78ab;
+    transform: scale(0.95);
+  }
+  100% {
+    box-shadow: 0 0 30px 10px #ff78ab;
+    transform: scale(0.90);
+  }
+}
+
+.new-board-btn {
+  font-family: 'Baloo 2', cursive, sans-serif;
+  color: white;
+  font-size: 2vmin;
+  padding: 2vmin 4vmin;
+  background: linear-gradient(135deg, #ff78ab, #fcff76);
+  border-radius: 12px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-board-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.3);
 }
 </style>
