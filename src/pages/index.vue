@@ -9,7 +9,13 @@
           <div class="bingo-board">
             <div class="bingo-grid">
               <v-card v-for="(cell, index) in bingoItems" :key="index" class="bingo-cell" :class="{ 'selected': cell.selected, 'free-space': cell.isFree && !cell.selected, 'winning-cell': winningCells.includes(index) }" elevation="2" @click="toggleCell(index)">
-                <v-card-text class="text-center d-flex align-center justify-center">
+                <v-card-text 
+                  class="text-center d-flex align-center justify-center"
+                  :class="{
+                    'text-small': cell.text.length > 20,
+                    'text-smaller': cell.text.length > 30
+                  }"
+                >
                   <span>{{ cell.text }}</span>
                 </v-card-text> 
               </v-card>
@@ -233,24 +239,28 @@ onMounted(() => {
   color: #ff78ab;
   position: relative;
   z-index: 1;
-  font-size: min(2vh, 14px);
+  font-size: min(2.5vmin, 16px);
   line-height: 1.2;
   padding: min(1vh, 8px);
   word-wrap: break-word;
   hyphens: auto;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 600px) {
   .bingo-cell .v-card-text {
-    font-size: min(1.8vh, 12px);
     padding: 3px;
+    font-size: min(2vmin, 14px);
   }
 }
 
 @media (max-width: 400px) {
   .bingo-cell .v-card-text {
-    font-size: min(1.6vh, 10px);
-    padding: 2px;
+    font-size: min(1.8vmin, 12px);
   }
 }
 
