@@ -27,7 +27,7 @@
   "include": [
     "src/**/*",
     "src/**/*.vue"
-  ],
+, "vue.config.js"  ],
   "exclude": ["dist", "node_modules", "cypress"],
   "references": [{ "path": "./tsconfig.node.json" }],
 }
