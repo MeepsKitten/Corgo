@@ -27,17 +27,56 @@
   </v-container>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import squaresData from '@/data/squares.json'
+console.log('Initial load - squaresData:', squaresData) // Check if data loads
 
-const bingoItems = ref(Array(25).fill(null).map((_, index) => ({
-  text: `Item ${index + 1}`,
-  selected: false
-})))
+const bingoItems = ref([])
 
 const toggleCell = (index) => {
   bingoItems.value[index].selected = !bingoItems.value[index].selected
 }
+
+const getRandomItem = (array) => array[Math.floor(Math.random() * array.length)]
+
+const generateBingoBoard = () => {
+  const difficulties = ['Easy', 'Medium', 'Hard', 'Rare']
+  const items = []
+
+  // Ensure at least one item from each difficulty
+  difficulties.forEach(difficulty => {
+    items.push(getRandomItem(squaresData[difficulty]))
+  })
+
+  // Fill remaining slots with weighted randomness
+  while (items.length < 24) {
+    const randomDifficulty = Math.random() < 0.6 ? 'Easy' : Math.random() < 0.85 ? 'Medium' : Math.random() < 0.95 ? 'Hard' : 'Rare'
+    items.push(getRandomItem(squaresData[randomDifficulty]))
+  }
+
+  // Shuffle the items
+  items.sort(() => Math.random() - 0.5)
+
+  // Insert the free item in the center
+  bingoItems.value = [
+    ...items.slice(0, 12),
+    { text: getRandomItem(squaresData['Free']), selected: false },
+    ...items.slice(12)
+  ]
+}
+
+onMounted(() => {
+console.log('Component mounted')
+if (!squaresData) {
+  console.error('squares.json data not loaded')
+  return
+}
+
+console.log('Generating board with data:', squaresData)
+generateBingoBoard()
+console.log('Generated board:', bingoItems.value)
+})
 </script>
 
 <style scoped>
@@ -95,7 +134,7 @@ const toggleCell = (index) => {
 }
 
 .bingo-cell:hover {
-  transform: translateY(-1vmin);
+  transform: scale(0.95);
 }
 
 .bingo-cell .v-card-text {
