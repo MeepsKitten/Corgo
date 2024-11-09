@@ -3,9 +3,9 @@
     <v-row justify="center" align="center" class="fill-height">
       <v-col cols="12" class="d-flex justify-center">
         <div class="bingo-wrapper">
-          <div class="bingo-title text-center text-h4 py-4">
+          <!-- <div class="bingo-title text-center text-h4 py-4">
             CORGO
-          </div>
+          </div> -->
           <div class="bingo-board">
             <div class="bingo-grid">
               <v-card v-for="(cell, index) in bingoItems" :key="index" class="bingo-cell" :class="{ 'selected': cell.selected, 'free-space': cell.isFree && !cell.selected, 'winning-cell': winningCells.includes(index) }" elevation="2" @click="toggleCell(index)">
@@ -15,17 +15,17 @@
               </v-card>
             </div>
           </div>
-          <v-btn
-            class="mt-4 new-board-btn"
-            color="#ff78ab"
-            @click="generateBingoBoard"
-            elevation="2"
-          >
-            New Board!
-          </v-btn>
         </div>
       </v-col>
     </v-row>
+    <v-btn
+      class="new-board-btn"
+      color="#ff78ab"
+      @click="generateBingoBoard"
+      elevation="2"
+    >
+      New Board!
+    </v-btn>
   </v-container>
 </template>
 
@@ -149,7 +149,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   overflow: auto;
-  padding: 1rem;
+  padding: 0.1rem;
   box-sizing: border-box;
   background-image:
     radial-gradient(circle at center, #ffffff, transparent 30%),
@@ -158,44 +158,46 @@ onMounted(() => {
 
 .bingo-wrapper {
   width: min(90vmin, 90%);
-  max-height: 95dvh;
-  max-height: 95vh;
+  height: min(95vh, 95vw);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   box-sizing: border-box;
   margin: auto;
 }
 
+.bingo-title {
+  font-family: 'Baloo 2', cursive, sans-serif;
+  font-size: min(3vmin, 24px);
+  height: min(5vh, 40px);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .bingo-board {
-  background: linear-gradient(135deg, #3becff 0%, #3becff 100%);
   width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-height: 0;
   padding: 1vmin;
   box-sizing: border-box;
-}
-
-.bingo-title {
-  font-family: 'Baloo 2', cursive, sans-serif;
-  font-size: 3vmin;
-  margin-bottom: 2vmin;
 }
 
 .bingo-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  grid-gap: 1vmin;
-  width: 100%;
-  height: 100%;
+  grid-gap: min(1.5vh, 12px);
+  width: min(100%, 80vh);
+  aspect-ratio: 1;
   box-sizing: border-box;
 }
 
 .bingo-cell {
-  cursor: pointer;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,7 +235,7 @@ onMounted(() => {
   z-index: 1;
   font-size: min(2vh, 14px);
   line-height: 1.2;
-  padding: 4px;
+  padding: min(1vh, 8px);
   word-wrap: break-word;
   hyphens: auto;
 }
@@ -285,10 +287,15 @@ onMounted(() => {
 }
 
 .new-board-btn {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: 'Baloo 2', cursive, sans-serif;
   color: white;
-  font-size: 2vmin;
-  padding: 2vmin 4vmin;
+  font-size: min(2vmin, 16px);
+  height: min(5vh, 40px);
+  padding: 0 min(4vmin, 32px);
   background: linear-gradient(135deg, #ff78ab, #fcff76);
   border-radius: 12px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
@@ -296,6 +303,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10;
 }
 
 @media (max-width: 600px) {
