@@ -41,13 +41,30 @@ const toggleCell = (index) => {
   checkWinningLines()
 }
 
-const getRandomItem = (array, usedItems) => {
-  let item;
-  do {
-    item = array[Math.floor(Math.random() * array.length)];
-  } while (usedItems.has(item));
-  usedItems.add(item);
-  return item;
+const getRandomItem = (difficulty, usedItems) => {
+  // Try the requested difficulty first
+  const availableItems = squaresData[difficulty].filter(item => !usedItems.has(item))
+  
+  if (availableItems.length > 0) {
+    return availableItems[Math.floor(Math.random() * availableItems.length)]
+  }
+
+  // If no items available, try easier difficulties in order
+  const difficultyOrder = ['Rare', 'Hard', 'Medium', 'Easy']
+  const currentIndex = difficultyOrder.indexOf(difficulty)
+  
+  // Try each easier difficulty
+  for (let i = currentIndex + 1; i < difficultyOrder.length; i++) {
+    const easierDifficulty = difficultyOrder[i]
+    const easierItems = squaresData[easierDifficulty].filter(item => !usedItems.has(item))
+    if (easierItems.length > 0) {
+      return easierItems[Math.floor(Math.random() * easierItems.length)]
+    }
+  }
+  
+  // If all else fails, clear used items and try original difficulty again
+  usedItems.clear()
+  return squaresData[difficulty][Math.floor(Math.random() * squaresData[difficulty].length)]
 }
 
 const generateBingoBoard = () => {
@@ -55,28 +72,39 @@ const generateBingoBoard = () => {
   const items = []
   const usedItems = new Set()
 
+  // Clear winning cells
+  winningCells.value = []
+
   // Ensure at least one item from each difficulty
   difficulties.forEach(difficulty => {
-    items.push({ text: getRandomItem(squaresData[difficulty], usedItems), selected: false })
+    const item = getRandomItem(difficulty, usedItems)
+    usedItems.add(item)
+    items.push({ text: item, selected: false })
   })
 
   // Fill remaining slots with weighted randomness
   while (items.length < 24) {
-    const randomDifficulty = Math.random() < 0.6 ? 'Easy' : Math.random() < 0.85 ? 'Medium' : Math.random() < 0.95 ? 'Hard' : 'Rare'
-    items.push({ text: getRandomItem(squaresData[randomDifficulty], usedItems), selected: false })
+    const rand = Math.random()
+    const randomDifficulty = 
+      rand < 0.3 ? 'Easy' :
+      rand < 0.53 ? 'Medium' :
+      rand < 0.76 ? 'Hard' : 'Rare'
+    
+    const item = getRandomItem(randomDifficulty, usedItems)
+    usedItems.add(item)
+    items.push({ text: item, selected: false })
   }
 
   // Shuffle the items
   items.sort(() => Math.random() - 0.5)
 
   // Insert the free item in the center
+  const freeItem = getRandomItem('Free', new Set())
   bingoItems.value = [
     ...items.slice(0, 12),
-    { text: getRandomItem(squaresData['Free'], usedItems), selected: false, isFree: true },
+    { text: freeItem, selected: true, isFree: true },
     ...items.slice(12)
   ]
-
-  winningCells.value = []
 }
 
 const checkWinningLines = () => {
@@ -198,6 +226,25 @@ onMounted(() => {
   color: #ff78ab;
   position: relative;
   z-index: 1;
+  font-size: 1.4vmin;
+  line-height: 1.2;
+  padding: 0.5vmin;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+@media (max-width: 600px) {
+  .bingo-cell .v-card-text {
+    font-size: 1.2vmin;
+    padding: 0.3vmin;
+  }
+}
+
+@media (max-width: 400px) {
+  .bingo-cell .v-card-text {
+    font-size: 1vmin;
+    padding: 0.2vmin;
+  }
 }
 
 .selected {
@@ -246,8 +293,17 @@ onMounted(() => {
   justify-content: center;
 }
 
-.new-board-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.3);
+@media (max-width: 600px) {
+  .new-board-btn {
+    font-size: 1.5vmin;
+    padding: 1.5vmin 3vmin;
+  }
+}
+
+@media (max-width: 400px) {
+  .new-board-btn {
+    font-size: 1.2vmin;
+    padding: 1vmin 2vmin;
+  }
 }
 </style>
