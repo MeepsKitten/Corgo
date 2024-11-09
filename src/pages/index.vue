@@ -226,24 +226,24 @@ onMounted(() => {
   color: #ff78ab;
   position: relative;
   z-index: 1;
-  font-size: 2vmin;
+  font-size: min(2vh, 14px);
   line-height: 1.2;
-  padding: 0.5vmin;
+  padding: 4px;
   word-wrap: break-word;
   hyphens: auto;
 }
 
 @media (max-width: 600px) {
   .bingo-cell .v-card-text {
-    font-size: 1.2vmin;
-    padding: 0.3vmin;
+    font-size: min(1.8vh, 12px);
+    padding: 3px;
   }
 }
 
 @media (max-width: 400px) {
   .bingo-cell .v-card-text {
-    font-size: 1vmin;
-    padding: 0.2vmin;
+    font-size: min(1.6vh, 10px);
+    padding: 2px;
   }
 }
 
