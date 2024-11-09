@@ -142,13 +142,15 @@ onMounted(() => {
 
 <style scoped>
 .bingo-container {
-  height: 100dvh;
-  height: 100vh;
+  min-height: 100dvh;
+  min-height: 100vh;
   width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: auto;
+  padding: 1rem;
+  box-sizing: border-box;
   background-image:
     radial-gradient(circle at center, #ffffff, transparent 30%),
     conic-gradient(from 0deg, #ff78ab 5%, #3becff 25%, #3becff 35%, #fcff76 55%, #fcff76 65%, #ff78ab 95%);
@@ -156,8 +158,8 @@ onMounted(() => {
 
 .bingo-wrapper {
   width: min(90vmin, 90%);
-  height: min(90dvh, 90%);
-  height: min(90vh, 90%);
+  max-height: 95dvh;
+  max-height: 95vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -312,15 +314,7 @@ onMounted(() => {
 
 @media (max-height: 600px) {
   .bingo-container {
-    min-height: 100dvh;
-    min-height: 100vh;
-    height: auto;
-    padding: 20px 0;
-  }
-  
-  .bingo-wrapper {
-    height: auto;
-    width: min(90vmin, 90%);
+    padding: 0.5rem;
   }
 }
 </style>
