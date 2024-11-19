@@ -231,39 +231,45 @@ const checkVersusSeed = () => {
   }
   
   const generateBoard = (path: string) => {
-    switch (path) {
-      case '/daily':
-        // Only update daily date if it doesn't exist
-        if (!store.boardDates.daily) {
-          store.$patch({
-            boardDates: {
-              ...store.boardDates,
-              daily: new Date().toISOString()
-            }
-          })
+    console.log('Generating board for path:', path)
+    
+    // Ensure boardDates exists
+    if (!store.boardDates) {
+      store.$patch({
+        boardDates: {
+          daily: new Date().toISOString(),
+          versus: new Date().toISOString(),
+          random: new Date().toISOString()
         }
-        generateDailyBoard()
-        break
-      case '/versus':
-        generateBoardVersus()
-        break
-      case '/random':
-        // Only generate new random if no seed exists
-        if (!store.randomSeed) {
-          const newSeed = Math.random().toString(36).substring(2, 15)
-          const randomDate = new Date()
-          store.$patch({ 
-            randomSeed: newSeed,
-            boardDates: {
-              ...store.boardDates,
-              random: randomDate.toISOString()
-            }
-          })
-        }
-        generateRandomBoard(store.randomSeed)
-        break
-      default:
-        generateDailyBoard()
+      })
+    }
+
+    try {
+      switch (path) {
+        case '/daily':
+          generateDailyBoard()
+          break
+        case '/versus':
+          generateBoardVersus()
+          break
+        case '/random':
+          if (!store.randomSeed) {
+            const newSeed = Math.random().toString(36).substring(2, 15)
+            store.$patch({ 
+              randomSeed: newSeed,
+              boardDates: {
+                ...store.boardDates,
+                random: new Date().toISOString()
+              }
+            })
+          }
+          generateRandomBoard(store.randomSeed)
+          break
+        default:
+          generateDailyBoard()
+      }
+    } catch (error) {
+      console.error('Error generating board:', error)
     }
   }
   
@@ -286,14 +292,38 @@ const checkVersusSeed = () => {
   watch(
     () => route.path,
     (newPath) => {
-      generateBoard(newPath)
+      console.log('Route changed to:', newPath)
+      if (newPath) {
+        generateBoard(newPath)
+      }
     },
     { immediate: true }
   )
   
   onMounted(() => {
-    startCountdownTimer()
-    startVersusSeedCheck()
+    try {
+      // Ensure store is properly initialized
+      if (!store.boardDates?.daily) {
+        store.$patch({
+          boardDates: {
+            daily: new Date().toISOString(),
+            versus: new Date().toISOString(),
+            random: new Date().toISOString()
+          }
+        })
+      }
+
+      startCountdownTimer()
+      startVersusSeedCheck()
+      
+      // Initial board generation
+      if (route.path) {
+        console.log('Initial board generation for path:', route.path)
+        generateBoard(route.path)
+      }
+    } catch (error) {
+      console.error('Error during component mount:', error)
+    }
   })
   
   // Replace the existing formattedDate computed property
@@ -332,6 +362,15 @@ const checkVersusSeed = () => {
   )
   
   const minDate = squaresData.dateModified; // Use the dateModified from JSON
+  
+  // Add these console logs for debugging
+  watch(() => store.boardDates, (newDates) => {
+    console.log('Board dates updated:', newDates)
+  }, { deep: true })
+
+  watch(() => bingoItems.value, (newItems) => {
+    console.log('Bingo items updated:', newItems)
+  }, { deep: true })
   
   </script>
   

@@ -8,10 +8,6 @@ const MODE_NAMES = {
   random: 'Random Board'
 } as const
 
-
-// Define a type for the keys of squaresData
-type Difficulty = keyof typeof squaresData;
-
 // Create a separate debug store
 export const useDebugFunctions = defineStore('debug', () => {
   const store = useBingoStore()
@@ -37,9 +33,22 @@ export const useDebugFunctions = defineStore('debug', () => {
     localStorage.setItem('constantUserSeed', newSeed)
     console.log(`Reset user seed. New seed: ${newSeed}`)
     
+    // Force store reinitialization
+    const store = useBingoStore()
+    store.$patch({
+      boardDates: {
+        daily: new Date().toISOString(),
+        versus: new Date().toISOString(),
+        random: new Date().toISOString()
+      }
+    })
+    
     // Regenerate the board if we're on the versus page
     if (window.location.pathname.includes('versus')) {
       board.handleBoardGeneration(window.location.pathname)
+    } else {
+      // Also regenerate daily board
+      board.generateDailyBoard()
     }
   }
 
@@ -126,6 +135,20 @@ declare global {
   }
 }
 
+// Add this helper function at the top of the file, before the composable
+function selectRandomItems<T>(array: T[], count: number, randomFunc = Math.random): T[] {
+  const result: T[] = [];
+  const tempArray = [...array]; // Create a copy to avoid modifying original
+
+  for (let i = 0; i < count && tempArray.length > 0; i++) {
+    const randomIndex = Math.floor(randomFunc() * tempArray.length);
+    result.push(tempArray[randomIndex]);
+    tempArray.splice(randomIndex, 1);
+  }
+
+  return result;
+}
+
 export function useBingoBoard() {
   const store = useBingoStore()
   const debug = useDebugFunctions()
@@ -176,61 +199,41 @@ export function useBingoBoard() {
     return x - Math.floor(x);
   }
 
-  const getRandomItem = (difficulty: Difficulty, usedItems: Set<string>, randomFunc = Math.random) => {
-    const items = squaresData[difficulty];
-    const availableItems = Array.isArray(items) ? items.filter(item => !usedItems.has(item)) : [];
-
-    if (availableItems.length > 0) {
-      return availableItems[Math.floor(randomFunc() * availableItems.length)]
-    }
-
-    const difficultyOrder = ['Rare', 'Hard', 'Medium', 'Easy']
-    const currentIndex = difficultyOrder.indexOf(difficulty)
-
-    for (let i = currentIndex + 1; i < difficultyOrder.length; i++) {
-      const easierDifficulty = difficultyOrder[i] as Difficulty
-      const items = squaresData[easierDifficulty]
-      const easierItems = Array.isArray(items) ? items.filter(item => !usedItems.has(item)) : []
-      if (easierItems.length > 0) {
-        return easierItems[Math.floor(randomFunc() * easierItems.length)]
-      }
-    }
-
-    usedItems.clear()
-    return squaresData[difficulty][Math.floor(randomFunc() * squaresData[difficulty].length)]
-  }
-
   const generateBoard = (randomFunc = Math.random) => {
-    const difficulties = ['Easy', 'Medium', 'Hard', 'Rare']
-    const items = []
-    const usedItems = new Set<string>()
+    isLoading.value = true;
+    try {
+      // Ensure we have a valid date from store
+      if (!store.boardDates?.daily) {
+        store.$patch({
+          boardDates: {
+            daily: new Date().toISOString(),
+            versus: new Date().toISOString(),
+            random: new Date().toISOString()
+          }
+        });
+      }
 
-    winningCells.value = []
+      // Initialize arrays for different difficulties
+      const easySquares = [...squaresData.Easy];
+      const mediumSquares = [...squaresData.Medium];
+      const hardSquares = [...squaresData.Hard];
+      const rareSquares = [...squaresData.Rare];
+      
+      // Select items based on random function
+      const items = [
+        ...selectRandomItems(easySquares, 10, randomFunc),
+        ...selectRandomItems(mediumSquares, 8, randomFunc),
+        ...selectRandomItems(hardSquares, 5, randomFunc),
+        ...selectRandomItems(rareSquares, 1, randomFunc)
+      ].map(text => ({ text, selected: false })); // Convert strings to objects
 
-    difficulties.forEach(difficulty => {
-      const item = getRandomItem(difficulty as Difficulty, usedItems, randomFunc)
-      usedItems.add(item)
-      items.push({ text: item, selected: false })
-    })
-
-    while (items.length < 24) {
-      const rand = randomFunc()
-      const randomDifficulty =
-        rand < 0.3 ? 'Easy' :
-        rand < 0.53 ? 'Medium' :
-        rand < 0.76 ? 'Hard' : 'Rare'
-
-      const item = getRandomItem(randomDifficulty as Difficulty, usedItems, randomFunc)
-      usedItems.add(item)
-      items.push({ text: item, selected: false })
+      const freeSpace = selectRandomItems(squaresData.Free, 1, randomFunc)[0];
+      
+      return { items, freeSpace };
+    } finally {
+      isLoading.value = false;
     }
-
-    const freeItem = getRandomItem('Free', new Set(), randomFunc)
-    const currentModeKey = currentMode.value.toLowerCase().replace(' board', '') as 'daily' | 'versus' | 'random'
-    store.setSelection(currentModeKey, 12, true) // Assuming index 12 is the free space
-
-    return { items, freeItem }
-  }
+  };
 
   const updateCountdown = () => {
     const now = new Date()
@@ -253,80 +256,106 @@ export function useBingoBoard() {
   }
 
   const generateDailyBoard = () => {
-    currentMode.value = MODE_NAMES.daily
-    showCountdown.value = true
+    currentMode.value = MODE_NAMES.daily;
+    showCountdown.value = true;
 
-    // Use the global date from store instead of current date
-    const globalDate = new Date(store.boardDates.versus)
-    const dateSeed = globalDate.getFullYear() * 10000 + (globalDate.getMonth() + 1) * 100 + globalDate.getDate()
-    let seedNum = dateSeed
-
-    const { items, freeItem } = generateBoard(() => seededRandom(seedNum++))
-
-    bingoItems.value = [
-      ...items.slice(0, 12),
-      { text: freeItem, selected: true, free: true },
-      ...items.slice(12)
-    ]
-  }
-
-  const generateVersusBoard = (userSeed?: string) => {
-    currentMode.value = MODE_NAMES.versus
-    showCountdown.value = true
-
-    // Use the global date from store instead of current date
-    const globalDate = new Date(store.boardDates.versus)
-    const dateSeed = globalDate.getFullYear() * 10000 + (globalDate.getMonth() + 1) * 100 + globalDate.getDate()
-    let seedNum = dateSeed
-
-    // Generate the board items based on the date seed
-    const { items, freeItem } = generateBoard(() => seededRandom(seedNum++))  
-
-    // Modified shuffling logic with better seed handling
-    const userSpecificSeed = userSeed || debug.getUserSeed()
-    let userSeedNum = parseInt(userSpecificSeed.replace(/[^0-9a-f]/gi, ''), 16) % 1000000
-    
-    const shuffledItems = [...items]
-    for (let i = shuffledItems.length - 1; i > 0; i--) {
-        // Use multiple rounds of seededRandom to increase randomness
-        const seed1 = seededRandom(userSeedNum + i)
-        const seed2 = seededRandom(userSeedNum + i + 1000)
-        const finalSeed = (seed1 + seed2) / 2
-        const j = Math.floor(finalSeed * (i + 1))
-        ;[shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]]
+    // Ensure we have a valid date
+    if (!store.boardDates?.daily) {
+      store.$patch({
+        boardDates: {
+          daily: new Date().toISOString(),
+          versus: new Date().toISOString(),
+          random: new Date().toISOString()
+        }
+      });
     }
 
-    console.log('User seed used:', userSpecificSeed)
-    console.log('Initial userSeedNum:', userSeedNum)
+    const globalDate = new Date(store.boardDates.daily);
+    const dateSeed = globalDate.getFullYear() * 10000 + (globalDate.getMonth() + 1) * 100 + globalDate.getDate();
+    let seedNum = dateSeed;
+
+    const { items, freeSpace } = generateBoard(() => seededRandom(seedNum++));
+
+    // Create the board with free space selected
+    bingoItems.value = [
+      ...items.slice(0, 12),
+      { text: freeSpace, selected: true, free: true }, // Free space is selected
+      ...items.slice(12)
+    ];
+
+    // Also update the store's selection to include the center square (index 12)
+    if (!store.daily.includes(12)) {
+      store.daily.push(12);
+    }
+  };
+
+  const generateVersusBoard = (userSeed?: string) => {
+    currentMode.value = MODE_NAMES.versus;
+    showCountdown.value = true;
+
+    // Use the global date from store instead of current date
+    const globalDate = new Date(store.boardDates.versus);
+    const dateSeed = globalDate.getFullYear() * 10000 + (globalDate.getMonth() + 1) * 100 + globalDate.getDate();
+    let seedNum = dateSeed;
+
+    // Generate the board items based on the date seed
+    const { items, freeSpace } = generateBoard(() => seededRandom(seedNum++));
+
+    // Modified shuffling logic with better seed handling
+    const userSpecificSeed = userSeed || debug.getUserSeed();
+    let userSeedNum = parseInt(userSpecificSeed.replace(/[^0-9a-f]/gi, ''), 16) % 1000000;
+    
+    const shuffledItems = [...items];
+    for (let i = shuffledItems.length - 1; i > 0; i--) {
+        // Use multiple rounds of seededRandom to increase randomness
+        const seed1 = seededRandom(userSeedNum + i);
+        const seed2 = seededRandom(userSeedNum + i + 1000);
+        const finalSeed = (seed1 + seed2) / 2;
+        const j = Math.floor(finalSeed * (i + 1));
+        ;[shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]];
+    }
+
+    console.log('User seed used:', userSpecificSeed);
+    console.log('Initial userSeedNum:', userSeedNum);
 
     bingoItems.value = [
         ...shuffledItems.slice(0, 12),
-        { text: freeItem, selected: true, free: true },
+        { text: freeSpace, selected: true, free: true }, // Free space is selected
         ...shuffledItems.slice(12)
-    ]
-  }
+    ];
+
+    // Also update the store's selection to include the center square (index 12)
+    if (!store.versus.includes(12)) {
+      store.versus.push(12);
+    }
+  };
 
   const generateRandomBoard = (seed?: string) => {
-    currentMode.value = MODE_NAMES.random
-    showCountdown.value = false
+    currentMode.value = MODE_NAMES.random;
+    showCountdown.value = false;
     
     if (!seed) {
-      console.error('No seed provided for random board generation')
-      return
+      console.error('No seed provided for random board generation');
+      return;
     }
 
-    let seedNum = parseInt(seed, 36)
-    const randomFunc = () => seededRandom(seedNum++)
+    let seedNum = parseInt(seed, 36);
+    const randomFunc = () => seededRandom(seedNum++);
     
-    const { items, freeItem } = generateBoard(randomFunc)
-    const shuffledItems = [...items].sort(() => randomFunc())
+    const { items, freeSpace } = generateBoard(randomFunc);
+    const shuffledItems = [...items].sort(() => randomFunc());
 
     bingoItems.value = [
       ...shuffledItems.slice(0, 12),
-      { text: freeItem, selected: true, free: true },
+      { text: freeSpace, selected: true, free: true }, // Free space is selected
       ...shuffledItems.slice(12)
-    ]
-  }
+    ];
+
+    // Also update the store's selection to include the center square (index 12)
+    if (!store.random.includes(12)) {
+      store.random.push(12);
+    }
+  };
 
     // Add this to refreshRandom function
     const refreshRandom = () => {
@@ -347,8 +376,6 @@ export function useBingoBoard() {
     
         generateRandomBoard(newSeed);
       };
-
-  // Add a helper function to check if dates match
 
   const handleBoardGeneration = (path: string) => {
     if (path.includes('daily')) {
