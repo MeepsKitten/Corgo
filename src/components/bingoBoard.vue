@@ -80,6 +80,7 @@
               header-color="#3becff"
               theme="dark"
               :max="maxDate"
+              :min="minDate"
             ></v-date-picker>
           </v-card-text>
           <v-card-actions class="pa-4">
@@ -116,6 +117,7 @@
   import { useBingoBoard } from '@/composables/bingoBoard'
   import { useRoute} from 'vue-router'
   import { useBingoStore } from '../bingoStore'
+  import squaresData from '@/data/squares.json' // Import the JSON file
 
   const route = useRoute()
   const store = useBingoStore()
@@ -340,6 +342,8 @@ const checkVersusSeed = () => {
     },
     { deep: true }
   )
+  
+  const minDate = squaresData.dateModified; // Use the dateModified from JSON
   
   </script>
   

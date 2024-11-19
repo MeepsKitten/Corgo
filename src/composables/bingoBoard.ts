@@ -113,7 +113,8 @@ export function useBingoBoard() {
   }
 
   const getRandomItem = (difficulty: Difficulty, usedItems: Set<string>, randomFunc = Math.random) => {
-    const availableItems = squaresData[difficulty].filter(item => !usedItems.has(item))
+    const items = squaresData[difficulty];
+    const availableItems = Array.isArray(items) ? items.filter(item => !usedItems.has(item)) : [];
 
     if (availableItems.length > 0) {
       return availableItems[Math.floor(randomFunc() * availableItems.length)]
@@ -124,7 +125,8 @@ export function useBingoBoard() {
 
     for (let i = currentIndex + 1; i < difficultyOrder.length; i++) {
       const easierDifficulty = difficultyOrder[i] as Difficulty
-      const easierItems = squaresData[easierDifficulty].filter(item => !usedItems.has(item))
+      const items = squaresData[easierDifficulty]
+      const easierItems = Array.isArray(items) ? items.filter(item => !usedItems.has(item)) : []
       if (easierItems.length > 0) {
         return easierItems[Math.floor(randomFunc() * easierItems.length)]
       }
