@@ -1,6 +1,11 @@
 {
   "Free": [
-    "Corgi is short"
+    "Corgi is short",
+    "Cork is hungry",
+    "Corgi is live",
+    "Meeps is a cat",
+    "Foxes are neat",
+    "Sylvester is daddy"
   ],
   "Easy": [
     "Poop mentioned",
@@ -21,7 +26,8 @@
     "\"Chat shut up\"",
     "Dies in game",
     "\"First time chatter\"",
-    "Says an emote name in a sentence"
+    "Says an emote name in a sentence",
+    "\"I'm cooking\""
   ],
   "Medium": [
     "Simping for character",
@@ -35,7 +41,11 @@
     "Jump scared",
     "Deez nuts joke",
     "SpongeBob reference",
-    "\"Daddy? / Mommy?\""
+    "\"Daddy? / Mommy?\"",
+    "\"Spoooopy tiiimmee\"",
+    "\"Scam\"",
+    "\"I'm about to lose it\"",
+    "\"Corgi makes a sniffing noise\""
   ],
   "Hard": [
     "Complains about bingo",
@@ -48,13 +58,15 @@
     "Desk slam",
     "\"Chat I'm Hungyyy\"",
     "\"I don't have a problem\"",
-    "\"Game of the year\""
+    "\"Game of the year\"",
+    "\"Mention a mod by name\""
   ],
   "Rare": [
     "Corgi admits he's short",
     "Feet paws on stream",
     "New 7TV emote added",
     "Julune on stream",
-    "Stream outage"
+    "Stream outage",
+    "Cork sings"
   ]
 }
