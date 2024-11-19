@@ -114,11 +114,10 @@
   
   <script setup lang="ts">
   import { onMounted, watch, computed, ref } from 'vue'
-  import { useBingoBoard } from '@/composables/bingoBoard'
+  import { useBingoBoard, useDebugFunctions } from '@/composables/bingoBoard'
   import { useRoute} from 'vue-router'
   import { useBingoStore } from '../bingoStore'
   import squaresData from '@/data/squares.json' // Import the JSON file
-  import { useDebugFunctions } from '@/composables/bingoBoard'
 
   const route = useRoute()
   const store = useBingoStore()
