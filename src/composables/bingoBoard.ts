@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import squaresData from '@/data/squares.json'
 import { useBingoStore } from '@/bingoStore'
+import { v4 as uuidv4 } from 'uuid'
 
 const MODE_NAMES = {
   daily: 'Daily Board',
@@ -16,6 +17,18 @@ type Difficulty = keyof typeof squaresData;
 export const useDebugFunctions = defineStore('debug', () => {
   const store = useBingoStore()
   const board = useBingoBoard()
+
+  function getUserSeed(): string {
+    let userSeed = localStorage.getItem('versusSeed') || uuidv4()
+    if (!userSeed) {
+      userSeed = uuidv4()
+      localStorage.setItem('versusSeed', userSeed)
+      console.log(`Generated new user seed: ${userSeed}`)
+    } else {
+      console.log(`Using existing user seed: ${userSeed}`)
+    }
+    return userSeed
+  }
 
   function debugSetTime(hoursFromNow: number) {
     const currentDate = new Date()
@@ -38,7 +51,8 @@ export const useDebugFunctions = defineStore('debug', () => {
   }
 
   return {
-    debugSetTime
+    debugSetTime,
+    getUserSeed
   }
 })
 
@@ -65,6 +79,7 @@ declare global {
 
 export function useBingoBoard() {
   const store = useBingoStore()
+  const debug = useDebugFunctions()
   const bingoItems = ref(Array(25).fill({ text: '', selected: false }))
   const winningCells = ref<number[]>([])
   const currentMode = ref('Daily Board')
@@ -209,22 +224,13 @@ export function useBingoBoard() {
     currentMode.value = MODE_NAMES.versus
     showCountdown.value = true
 
-    // Use the global date for seed generation
-    const globalDate = new Date(store.boardDates.daily)
-    const est = new Date(globalDate.toLocaleString('en-US', { timeZone: 'America/New_York' }))
-    let seed = est.getFullYear() * 10000 + (est.getMonth() + 1) * 100 + est.getDate()
+    const seed = userSeed || debug.getUserSeed()
+    let seedNum = parseInt(seed.replace(/-/g, ''), 36)
 
-    // Generate the daily board items
-    const { items, freeItem } = generateBoard(() => seededRandom(seed++))
+    const { items, freeItem } = generateBoard(() => seededRandom(seedNum++))
 
-    // Shuffle the items for the versus board
     let finalItems = [...items]
-    if (userSeed) {
-      let seedNum = parseInt(userSeed, 36)
-      finalItems = finalItems.sort(() => seededRandom(seedNum++) - 0.5)
-    } else {
-      finalItems = finalItems.sort(() => seededRandom(seed++) - 0.5)
-    }
+    finalItems = finalItems.sort(() => seededRandom(seedNum++) - 0.5)
 
     bingoItems.value = [
       ...finalItems.slice(0, 12),
