@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import squaresData from '@/data/squares.json'
 import { useBingoStore } from '@/bingoStore'
-import { v4 as uuidv4 } from 'uuid'
 
 const MODE_NAMES = {
   daily: 'Daily Board',
@@ -18,16 +17,59 @@ export const useDebugFunctions = defineStore('debug', () => {
   const store = useBingoStore()
   const board = useBingoBoard()
 
+  // Function to get or generate a constant user-specific seed
   function getUserSeed(): string {
-    let userSeed = localStorage.getItem('versusSeed') || uuidv4()
+    let userSeed = localStorage.getItem('constantUserSeed')
     if (!userSeed) {
-      userSeed = uuidv4()
-      localStorage.setItem('versusSeed', userSeed)
-      console.log(`Generated new user seed: ${userSeed}`)
+      userSeed = generateConstantSeed()
+      localStorage.setItem('constantUserSeed', userSeed)
+      console.log(`Generated new constant user seed: ${userSeed}`)
     } else {
-      console.log(`Using existing user seed: ${userSeed}`)
+      console.log(`Using existing constant user seed: ${userSeed}`)
     }
     return userSeed
+  }
+
+  // Add reset function
+  function resetUserSeed() {
+    localStorage.removeItem('constantUserSeed')
+    const newSeed = generateConstantSeed()
+    localStorage.setItem('constantUserSeed', newSeed)
+    console.log(`Reset user seed. New seed: ${newSeed}`)
+    
+    // Regenerate the board if we're on the versus page
+    if (window.location.pathname.includes('versus')) {
+      board.handleBoardGeneration(window.location.pathname)
+    }
+  }
+
+  // Function to generate a constant seed based on user-specific data
+  function generateConstantSeed(): string {
+    // Collect various browser/device characteristics
+    const userAgent = navigator.userAgent
+    const language = navigator.language
+    const platform = navigator.platform
+    const screenResolution = `${window.screen.width}x${window.screen.height}`
+    const colorDepth = window.screen.colorDepth
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    
+    // Combine all the characteristics into a single string
+    const combinedData = `${userAgent}-${language}-${platform}-${screenResolution}-${colorDepth}-${timezone}`
+    
+    // Create a simple hash of the combined data
+    let hash = 0
+    for (let i = 0; i < combinedData.length; i++) {
+      const char = combinedData.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    
+    // Convert the hash to a positive base-36 string
+    const positiveHash = Math.abs(hash)
+    const seed = positiveHash.toString(36)
+    
+    console.log('Generated seed from user data:', seed)
+    return seed
   }
 
   function debugSetTime(hoursFromNow: number) {
@@ -52,7 +94,8 @@ export const useDebugFunctions = defineStore('debug', () => {
 
   return {
     debugSetTime,
-    getUserSeed
+    getUserSeed,
+    resetUserSeed
   }
 })
 
@@ -68,12 +111,18 @@ if (typeof window !== 'undefined') {
     const debug = useDebugFunctions()
     debug.debugSetTime(hoursFromNow)
   }
+
+  window.resetUserSeed = () => {
+    const debug = useDebugFunctions()
+    debug.resetUserSeed()
+  }
 }
 
 declare global {
   interface Window {
     resetBingoData: () => void
     debugSetTime: (hoursFromNow: number) => void
+    resetUserSeed: () => void
   }
 }
 
@@ -123,8 +172,8 @@ export function useBingoBoard() {
   }
 
   const seededRandom = (seed: number) => {
-    const x = Math.sin(seed++) * 10000
-    return x - Math.floor(x)
+    const x = Math.sin(seed * 9999) * 10000;
+    return x - Math.floor(x);
   }
 
   const getRandomItem = (difficulty: Difficulty, usedItems: Set<string>, randomFunc = Math.random) => {
@@ -206,12 +255,13 @@ export function useBingoBoard() {
   const generateDailyBoard = () => {
     currentMode.value = MODE_NAMES.daily
     showCountdown.value = true
-    
-    const storedDate = new Date(store.boardDates.daily)
-    const est = new Date(storedDate.toLocaleString('en-US', { timeZone: 'America/New_York' }))
-    let seed = est.getFullYear() * 10000 + (est.getMonth() + 1) * 100 + est.getDate()
-    
-    const { items, freeItem } = generateBoard(() => seededRandom(seed++))
+
+    // Use the global date from store instead of current date
+    const globalDate = new Date(store.boardDates.versus)
+    const dateSeed = globalDate.getFullYear() * 10000 + (globalDate.getMonth() + 1) * 100 + globalDate.getDate()
+    let seedNum = dateSeed
+
+    const { items, freeItem } = generateBoard(() => seededRandom(seedNum++))
 
     bingoItems.value = [
       ...items.slice(0, 12),
@@ -224,18 +274,35 @@ export function useBingoBoard() {
     currentMode.value = MODE_NAMES.versus
     showCountdown.value = true
 
-    const seed = userSeed || debug.getUserSeed()
-    let seedNum = parseInt(seed.replace(/-/g, ''), 36)
+    // Use the global date from store instead of current date
+    const globalDate = new Date(store.boardDates.versus)
+    const dateSeed = globalDate.getFullYear() * 10000 + (globalDate.getMonth() + 1) * 100 + globalDate.getDate()
+    let seedNum = dateSeed
 
-    const { items, freeItem } = generateBoard(() => seededRandom(seedNum++))
+    // Generate the board items based on the date seed
+    const { items, freeItem } = generateBoard(() => seededRandom(seedNum++))  
 
-    let finalItems = [...items]
-    finalItems = finalItems.sort(() => seededRandom(seedNum++) - 0.5)
+    // Modified shuffling logic with better seed handling
+    const userSpecificSeed = userSeed || debug.getUserSeed()
+    let userSeedNum = parseInt(userSpecificSeed.replace(/[^0-9a-f]/gi, ''), 16) % 1000000
+    
+    const shuffledItems = [...items]
+    for (let i = shuffledItems.length - 1; i > 0; i--) {
+        // Use multiple rounds of seededRandom to increase randomness
+        const seed1 = seededRandom(userSeedNum + i)
+        const seed2 = seededRandom(userSeedNum + i + 1000)
+        const finalSeed = (seed1 + seed2) / 2
+        const j = Math.floor(finalSeed * (i + 1))
+        ;[shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]]
+    }
+
+    console.log('User seed used:', userSpecificSeed)
+    console.log('Initial userSeedNum:', userSeedNum)
 
     bingoItems.value = [
-      ...finalItems.slice(0, 12),
-      { text: freeItem, selected: true, free: true },
-      ...finalItems.slice(12)
+        ...shuffledItems.slice(0, 12),
+        { text: freeItem, selected: true, free: true },
+        ...shuffledItems.slice(12)
     ]
   }
 

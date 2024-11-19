@@ -118,9 +118,11 @@
   import { useRoute} from 'vue-router'
   import { useBingoStore } from '../bingoStore'
   import squaresData from '@/data/squares.json' // Import the JSON file
+  import { useDebugFunctions } from '@/composables/bingoBoard'
 
   const route = useRoute()
   const store = useBingoStore()
+  const debug = useDebugFunctions()
   
   const board = useBingoBoard()
   
@@ -225,6 +227,11 @@ const checkVersusSeed = () => {
          storedEst.getDate() === globalEst.getDate()
 }
   
+  const generateBoardVersus = () => {
+    const userSeed = localStorage.getItem('versusSeed') || debug.getUserSeed()
+    board.generateVersusBoard(userSeed)
+  }
+  
   const generateBoard = (path: string) => {
     switch (path) {
       case '/daily':
@@ -240,23 +247,7 @@ const checkVersusSeed = () => {
         generateDailyBoard()
         break
       case '/versus':
-        if (!store.versusSeed || !checkVersusSeed()) {
-          const globalDate = new Date(store.boardDates.daily) // Use global date
-          const est = new Date(globalDate.toLocaleString('en-US', { timeZone: 'America/New_York' }))
-          const seed = Math.random().toString(36).substring(2, 15)
-          
-          store.$patch({
-            versusSeed: {
-              seed: seed,
-              date: est.toISOString()
-            },
-            boardDates: {
-              ...store.boardDates,
-              versus: est.toISOString()
-            }
-          })
-        }
-        generateVersusBoard()
+        generateBoardVersus()
         break
       case '/random':
         // Only generate new random if no seed exists
@@ -337,7 +328,6 @@ const checkVersusSeed = () => {
   watch(
     () => store.boardDates,
     (newDates) => {
-      console.log('Board dates changed:', newDates)
       board.handleBoardGeneration(route.path)
     },
     { deep: true }
