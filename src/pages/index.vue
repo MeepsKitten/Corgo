@@ -3,17 +3,20 @@
     <v-row justify="center" align="center" class="fill-height">
       <v-col cols="12" class="d-flex justify-center">
         <div class="bingo-wrapper">
-          <!-- <div class="bingo-title text-center text-h4 py-4">
-            CORGO
-          </div> -->
+          <div class="bingo-title text-center">
+            <h1 class="mode-title">{{ currentMode }}</h1>
+            <div v-if="showCountdown" class="countdown-text">
+              Next board in: {{ countdownTime }}
+            </div>
+          </div>
           <div class="bingo-board">
             <div class="bingo-grid">
               <v-card v-for="(cell, index) in bingoItems" :key="index" class="bingo-cell" :class="{ 'selected': cell.selected, 'free-space': cell.isFree && !cell.selected, 'winning-cell': winningCells.includes(index) }" elevation="2" @click="toggleCell(index)">
                 <v-card-text 
                   class="text-center d-flex align-center justify-center"
                   :class="{
-                    'text-small': cell.text.length > 20,
-                    'text-smaller': cell.text.length > 30
+                    'text-small': cell?.text?.length > 20,
+                    'text-smaller': cell?.text?.length > 30
                   }"
                 >
                   <span>{{ cell.text }}</span>
@@ -24,14 +27,32 @@
         </div>
       </v-col>
     </v-row>
-    <v-btn
-      class="new-board-btn"
-      color="#ff78ab"
-      @click="generateBingoBoard"
-      elevation="2"
-    >
-      New Board!
-    </v-btn>
+    <div class="button-container">
+      <v-btn
+        class="board-btn"
+        color="#ff78ab"
+        @click="generateDailyBoard"
+        elevation="2"
+      >
+        Daily Board
+      </v-btn>
+      <v-btn
+        class="board-btn"
+        color="#ff78ab"
+        @click="generateVersusBoard"
+        elevation="2"
+      >
+        Versus Board
+      </v-btn>
+      <v-btn
+        class="board-btn"
+        color="#ff78ab"
+        @click="generateRandomBoard"
+        elevation="2"
+      >
+        Random Board
+      </v-btn>
+    </div>
   </v-container>
 </template>
 
@@ -39,73 +60,133 @@
 import { ref, onMounted, computed } from 'vue'
 import squaresData from '@/data/squares.json'
 
-const bingoItems = ref([])
+const bingoItems = ref(Array(25).fill().map(() => ({ 
+  text: '', 
+  selected: false 
+})))
 const winningCells = ref([])
+const currentMode = ref('Daily Board')
+const countdownTime = ref('')
+const showCountdown = ref(false)
 
 const toggleCell = (index) => {
   bingoItems.value[index].selected = !bingoItems.value[index].selected
   checkWinningLines()
 }
 
-const getRandomItem = (difficulty, usedItems) => {
-  // Try the requested difficulty first
+const seededRandom = (seed) => {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
+const getRandomItem = (difficulty, usedItems, randomFunc = Math.random) => {
   const availableItems = squaresData[difficulty].filter(item => !usedItems.has(item))
   
   if (availableItems.length > 0) {
-    return availableItems[Math.floor(Math.random() * availableItems.length)]
+    return availableItems[Math.floor(randomFunc() * availableItems.length)]
   }
 
-  // If no items available, try easier difficulties in order
   const difficultyOrder = ['Rare', 'Hard', 'Medium', 'Easy']
   const currentIndex = difficultyOrder.indexOf(difficulty)
   
-  // Try each easier difficulty
   for (let i = currentIndex + 1; i < difficultyOrder.length; i++) {
     const easierDifficulty = difficultyOrder[i]
     const easierItems = squaresData[easierDifficulty].filter(item => !usedItems.has(item))
     if (easierItems.length > 0) {
-      return easierItems[Math.floor(Math.random() * easierItems.length)]
+      return easierItems[Math.floor(randomFunc() * easierItems.length)]
     }
   }
   
-  // If all else fails, clear used items and try original difficulty again
   usedItems.clear()
-  return squaresData[difficulty][Math.floor(Math.random() * squaresData[difficulty].length)]
+  return squaresData[difficulty][Math.floor(randomFunc() * squaresData[difficulty].length)]
 }
 
-const generateBingoBoard = () => {
+const generateBoard = (randomFunc = Math.random) => {
   const difficulties = ['Easy', 'Medium', 'Hard', 'Rare']
   const items = []
   const usedItems = new Set()
 
-  // Clear winning cells
   winningCells.value = []
 
-  // Ensure at least one item from each difficulty
   difficulties.forEach(difficulty => {
-    const item = getRandomItem(difficulty, usedItems)
+    const item = getRandomItem(difficulty, usedItems, randomFunc)
     usedItems.add(item)
     items.push({ text: item, selected: false })
   })
 
-  // Fill remaining slots with weighted randomness
   while (items.length < 24) {
-    const rand = Math.random()
+    const rand = randomFunc()
     const randomDifficulty = 
       rand < 0.3 ? 'Easy' :
       rand < 0.53 ? 'Medium' :
       rand < 0.76 ? 'Hard' : 'Rare'
     
-    const item = getRandomItem(randomDifficulty, usedItems)
+    const item = getRandomItem(randomDifficulty, usedItems, randomFunc)
     usedItems.add(item)
     items.push({ text: item, selected: false })
   }
 
-  // Shuffle the items
-  items.sort(() => Math.random() - 0.5)
+  const freeItem = getRandomItem('Free', new Set(), randomFunc)
+  return { items, freeItem }
+}
 
-  // Insert the free item in the center
-  const freeItem = getRandomItem('Free', new Set())
+const updateCountdown = () => {
+  const now = new Date()
+  const est = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  const tomorrow = new Date(est)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  
+  const diff = tomorrow - est
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+  
+  countdownTime.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
+const startCountdownTimer = () => {
+  updateCountdown()
+  setInterval(updateCountdown, 1000)
+}
+
+const generateDailyBoard = () => {
+  currentMode.value = 'Daily Board'
+  showCountdown.value = true
+  const today = new Date()
+  const est = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  let seed = est.getFullYear() * 10000 + (est.getMonth() + 1) * 100 + est.getDate()
+  const { items, freeItem } = generateBoard(() => seededRandom(seed++))
+  
+  bingoItems.value = [
+    ...items.slice(0, 12),
+    { text: freeItem, selected: true, isFree: true },
+    ...items.slice(12)
+  ]
+}
+
+const generateVersusBoard = () => {
+  currentMode.value = 'Versus Board'
+  showCountdown.value = true
+  const today = new Date()
+  const est = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  let seed = est.getFullYear() * 10000 + (est.getMonth() + 1) * 100 + est.getDate()
+  const { items, freeItem } = generateBoard(() => seededRandom(seed++))
+  const shuffledItems = [...items].sort(() => Math.random() - 0.5)
+  
+  bingoItems.value = [
+    ...shuffledItems.slice(0, 12),
+    { text: freeItem, selected: true, isFree: true },
+    ...shuffledItems.slice(12)
+  ]
+}
+
+const generateRandomBoard = () => {
+  currentMode.value = 'Random Board'
+  showCountdown.value = false
+  const { items, freeItem } = generateBoard()
+  items.sort(() => Math.random() - 0.5)
+  
   bingoItems.value = [
     ...items.slice(0, 12),
     { text: freeItem, selected: true, isFree: true },
@@ -142,7 +223,8 @@ const checkWinningLines = () => {
 }
 
 onMounted(() => {
-  generateBingoBoard()
+  generateDailyBoard()
+  startCountdownTimer()
 })
 </script>
 
@@ -173,12 +255,23 @@ onMounted(() => {
 }
 
 .bingo-title {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.mode-title {
   font-family: 'Baloo 2', cursive, sans-serif;
-  font-size: min(3vmin, 24px);
-  height: min(5vh, 40px);
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+  font-size: min(4vmin, 32px);
+  color: #3becff;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.countdown-text {
+  font-family: 'Baloo 2', cursive, sans-serif;
+  font-size: min(2.5vmin, 20px);
+  color: #3becff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .bingo-board {
@@ -296,37 +389,39 @@ onMounted(() => {
   }
 }
 
-.new-board-btn {
+.button-container {
   position: fixed;
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  z-index: 10;
+}
+
+.board-btn {
   font-family: 'Baloo 2', cursive, sans-serif;
   color: white;
   font-size: min(2vmin, 16px);
   height: min(5vh, 40px);
-  padding: 0 min(4vmin, 32px);
-  background: linear-gradient(135deg, #ff78ab, #fcff76);
+  padding: 0 min(2vmin, 16px);
+  background: #3becff;
   border-radius: 12px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
-  .new-board-btn {
+  .button-container {
+    flex-direction: column;
+    bottom: 10px;
+    gap: 0.5rem;
+  }
+  
+  .board-btn {
     font-size: 1.5vmin;
     padding: 1.5vmin 3vmin;
-  }
-}
-
-@media (max-width: 400px) {
-  .new-board-btn {
-    font-size: 1.2vmin;
-    padding: 1vmin 2vmin;
   }
 }
 
