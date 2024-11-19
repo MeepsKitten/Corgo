@@ -6,6 +6,8 @@ import Layouts from 'vite-plugin-vue-layouts'
 import Vue from '@vitejs/plugin-vue'
 import VueRouter from 'unplugin-vue-router/vite'
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import { resolve } from 'path'
+import copy from 'vite-plugin-copy'
 
 // Utilities
 import { defineConfig } from 'vite'
@@ -53,6 +55,16 @@ export default defineConfig({
         }],
       },
     }),
+    copy({
+      targets: [
+        {
+          src: resolve(__dirname, 'dist/index.html'),
+          dest: resolve(__dirname, 'dist'),
+          rename: '404.html'
+        }
+      ],
+      hook: 'writeBundle'
+    })
   ],
   define: { 'process.env': {} },
   resolve: {
