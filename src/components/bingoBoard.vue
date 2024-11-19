@@ -134,7 +134,6 @@
     showCountdown,
     startCountdownTimer,
     generateDailyBoard,
-    generateVersusBoard,
     generateRandomBoard,
     isLoading,
     refreshRandom,
