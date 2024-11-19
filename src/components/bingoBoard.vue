@@ -86,6 +86,12 @@
             <v-spacer></v-spacer>
             <v-btn 
               color="#ff78ab"
+              @click="resetDate"
+            >
+              Reset
+            </v-btn>
+            <v-btn 
+              color="#ff78ab"
               @click="confirmDate"
             >
               Confirm
@@ -186,6 +192,13 @@ const currentBoardMode = computed<BingoMode>(() => {
 
     // Reset the button state
     //selectedDate.value = new Date();
+  };
+
+  const resetDate = () => {
+    const now = new Date();
+    const estOffset = -5 * 60; // EST is UTC-5
+    const estDate = new Date(now.getTime() + (now.getTimezoneOffset() + estOffset) * 60000);
+    selectedDate.value = estDate;
   };
 
   // Calculate the current date in EST
@@ -313,8 +326,6 @@ const checkVersusSeed = () => {
       day: 'numeric'
     })
   })
-  
-  // Add this to refreshRandom function
   const showDatePicker = ref(false)
   
   const openDatePicker = () => {
