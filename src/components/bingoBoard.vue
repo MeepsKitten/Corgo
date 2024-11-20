@@ -197,19 +197,20 @@ const currentBoardMode = computed<BingoMode>(() => {
   };
 
   const resetDate = () => {
-    const now = new Date();
-    const estOffset = -5 * 60; // EST is UTC-5
-    const estDate = new Date(now.getTime() + (now.getTimezoneOffset() + estOffset) * 60000);
-    selectedDate.value = estDate;
-  };
+    const now = new Date()
+    const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+    selectedDate.value = estDate
+  }
 
-  // Calculate the current date in EST
-const maxDate = computed(() => {
-  const now = new Date()
-  const estOffset = -5 * 60 // EST is UTC-5
-  const estDate = new Date(now.getTime() + (now.getTimezoneOffset() + estOffset) * 60000)
-  return estDate.toISOString().substr(0, 10) // Format as YYYY-MM-DD
-})
+  // Calculate the current date in EST/EDT (Eastern Time)
+  const maxDate = computed(() => {
+    const now = new Date()
+    // Get the current date in Eastern Time
+    const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+    // Set time to start of day to avoid timezone issues
+    estDate.setHours(0, 0, 0, 0)
+    return estDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
+  })
   
 const checkVersusSeed = () => {
   if (!store.versusSeed) return false
